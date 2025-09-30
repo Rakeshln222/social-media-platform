@@ -1,0 +1,59 @@
+{% for post in page_obj %}
+  <div class="post">
+    <p><strong>{{ post.author.username }}</strong> {{ post.created_at|date:"SHORT_DATETIME_FORMAT" }}</p>
+    <p>{{ post.content|linebreaks }}</p>
+    {% if post.image %}
+      <img src="{{ post.image.url }}" style="max-width:100%; height:auto;">
+    {% endif %}
+    <p>
+      <button class="like-btn" data-id="{{ post.id }}">
+        <span class="like-text">{% if post.user_liked %}Unlike{% else %}Like{% endif %}</span>
+      </button>
+      <span class="likes-count" id="likes-{{ post.id }}">{{ post.like_count }}</span> likes
+    </p>
+
+    <!-- comments -->
+    <div class="comments">
+      {% for c in post.comments.all %}
+        <p><small><strong>{{ c.user.username }}</strong> {{ c.text }}</small></p>
+      {% endfor %}
+    </div>
+
+    <!-- comment form -->
+    <form action="{% url 'add_comment' post.id %}" method="post">
+      {% csrf_token %}
+      {{ comment_form.text }}
+      <button type="submit">Comment</button>
+    </form>
+  </div>
+{% endfor %}
+
+<!-- pagination -->
+{% if page_obj.has_other_pages %}
+  <div>
+    {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}">Prev</a>
+    {% endif %}
+    <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}">Next</a>
+    {% endif %}
+  </div>
+{% endif %}
+
+<script>
+document.querySelectorAll('.like-btn').forEach(btn=>{
+  btn.addEventListener('click', function(){
+    const postId = this.dataset.id;
+    fetch(`/post/${postId}/like/`, {
+      method: 'POST',
+      headers: {'X-CSRFToken': csrftoken, 'Accept':'application/json'},
+    })
+    .then(r=>r.json())
+    .then(data=>{
+      document.getElementById(`likes-${postId}`).textContent = data.likes_count;
+      this.querySelector('.like-text').textContent = data.liked ? 'Unlike' : 'Like';
+    });
+  });
+});
+</script>
